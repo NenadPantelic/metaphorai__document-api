@@ -1,0 +1,6 @@
+# List documents by origin
+POST http://localhost:9081/api/v1/documents
+
+{
+  "
+}
