@@ -1,4 +1,4 @@
-package ai.metaphor.document_api.controller;
+package ai.metaphor.document_api.api.controller;
 
 import ai.metaphor.document_api.dto.request.DocumentFilterRequest;
 import ai.metaphor.document_api.dto.response.Document;
