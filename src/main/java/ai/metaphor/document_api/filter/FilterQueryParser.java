@@ -1,5 +1,6 @@
 package ai.metaphor.document_api.filter;
 
+import ai.metaphor.document_api.exception.FilterException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.PageRequest;
@@ -10,8 +11,10 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -21,8 +24,9 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 public class FilterQueryParser {
 
     private static final String FILTER_SEPARATOR = ";";
+    private static final String[] FILTER_OPERATORS = {"==", "!=", "~", "=gt=", "=gte=", "=lt=", "=lte="};
+    private static final Collation COLLATION = Collation.of("en").strength(Collation.ComparisonLevel.secondary());
 
-    private static final String COLLATION_LANGUAGE = "en";
 
     private static final BiFunction<String, String, Criteria> EQ = (key, value) -> where(key).is(value);
     private static final BiFunction<String, String, Criteria> NEQ = (key, value) -> where(key).ne(value);
@@ -67,12 +71,9 @@ public class FilterQueryParser {
 
         if (!isBlank(sortBy) && !isBlank(sortDirection)) {
             Sort sort = Sort.by(
-                    new Sort.Order(Sort.Direction.valueOf(sortDirection), sortBy).ignoreCase()
+                    new Sort.Order(Sort.Direction.valueOf(sortDirection), sortBy)
             );
-            // TODO: check this (does it support CI sorting)
-            query.collation(
-                    Collation.of(COLLATION_LANGUAGE).strength(Collation.ComparisonLevel.secondary())
-            );
+            query.collation(COLLATION);
             Pageable pageable = PageRequest.of(page, limit, sort);
             query.with(pageable);
         }
@@ -83,12 +84,38 @@ public class FilterQueryParser {
     // lhs_1<op_1>rhs_1;lhs_2<op_2>rhs_2....
     // -> [lhs_1, op_1, rhs_1], [lhs_2, op_2, rhs_2]
     private List<Triple> extractFilterCriteria(String filter) {
-        // TODO
-        return List.of();
+        List<Triple> filterCriteriaTriples = new ArrayList<>();
+        String[] filterExprs = filter.split(FILTER_SEPARATOR);
+        for (String filterExpr : filterExprs) {
+            Triple triple = convertFilterExpressionToTriple(filterExpr).orElseThrow(() -> {
+                String errMessage = String.format("Unable to process the following filter expression: %s", filterExpr);
+                log.warn(errMessage);
+                return new FilterException(errMessage);
+            });
+
+            filterCriteriaTriples.add(triple);
+        }
+
+        log.info("Filter criteria: {}", filterCriteriaTriples);
+        return filterCriteriaTriples;
     }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    // lhs<op>rhs -> [lhs, op, rhs]
+    private Optional<Triple> convertFilterExpressionToTriple(String filterExpression) {
+        for (String operator : FILTER_OPERATORS) {
+            String[] filterOpParts = filterExpression.split(operator);
+            if (filterOpParts.length != 2) {
+                continue;
+            }
+
+            return Optional.of(new Triple(filterOpParts[0], operator, filterOpParts[1]));
+        }
+
+        return Optional.empty();
     }
 
     // make it generic

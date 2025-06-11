@@ -14,7 +14,7 @@ import java.util.List;
 public class DocumentRepository {
 
     private static final String COLLECTION_NAME = "documents";
-    private static final String[] DOCUMENT_ITEM_FIELDS = {"_id", "name", "origin"};
+    private static final String[] DOCUMENT_ITEM_FIELDS = {"_id", "name", "origin", "status"};
 
     private final MongoTemplate mongoTemplate;
     private final FilterQueryParser filterQueryParser;

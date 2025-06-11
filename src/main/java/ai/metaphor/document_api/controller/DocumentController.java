@@ -28,6 +28,6 @@ public class DocumentController {
 
     @GetMapping("/{documentId}")
     Document getDocument(@PathVariable("documentId") String documentId) {
-        return null;
+        return documentService.getDocument(documentId);
     }
 }
