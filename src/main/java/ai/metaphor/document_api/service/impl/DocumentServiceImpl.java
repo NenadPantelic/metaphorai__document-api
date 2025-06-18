@@ -15,6 +15,9 @@ import java.util.List;
 @Slf4j
 public class DocumentServiceImpl implements DocumentService {
 
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_LIMIT = 50;
+
     private final DocumentRepository documentRepository;
     private final DocumentMapper documentMapper;
 
@@ -30,8 +33,8 @@ public class DocumentServiceImpl implements DocumentService {
                 documentFilterRequest.filter(),
                 documentFilterRequest.sortBy(),
                 documentFilterRequest.sortOrder(),
-                documentFilterRequest.page(),
-                documentFilterRequest.limit()
+                documentFilterRequest.page() != null ? documentFilterRequest.page() : DEFAULT_PAGE,
+                documentFilterRequest.limit() != null ? documentFilterRequest.limit() : DEFAULT_LIMIT
         );
         return documentMapper.bsonDocumentsToDocumentItems(documents);
     }

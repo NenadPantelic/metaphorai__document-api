@@ -8,3 +8,6 @@ Content-Type: application/json
   "sortOrder": "ASC",
   "limit": 10
 }
+
+###
+GET http://localhost:9081/api/v1/documents/684729ed3517ad329b15c43f

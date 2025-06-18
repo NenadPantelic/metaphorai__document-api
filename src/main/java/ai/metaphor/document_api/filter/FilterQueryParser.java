@@ -27,7 +27,6 @@ public class FilterQueryParser {
     private static final String[] FILTER_OPERATORS = {"==", "!=", "~", "=gt=", "=gte=", "=lt=", "=lte="};
     private static final Collation COLLATION = Collation.of("en").strength(Collation.ComparisonLevel.secondary());
 
-
     private static final BiFunction<String, String, Criteria> EQ = (key, value) -> where(key).is(value);
     private static final BiFunction<String, String, Criteria> NEQ = (key, value) -> where(key).ne(value);
     private static final BiFunction<String, String, Criteria> GT = (key, value) -> where(key).gt(value);
@@ -50,35 +49,41 @@ public class FilterQueryParser {
         Query query = new Query();
         query.fields().include(fields);
 
-        if (isBlank(filter)) {
-            return query;
-        }
+        if (isNotBlank(filter)) {
+            List<Triple> criteriaTriples = extractFilterCriteria(filter);
 
-        List<Triple> criteriaTriples = extractFilterCriteria(filter);
-        Criteria criteria = new Criteria();
+            for (Triple triple : criteriaTriples) {
+                String key = triple.first;
+                String value = triple.third;
+                BiFunction<String, String, Criteria> biFunction = OPERATOR_MAP.get(triple.second);
+                if (biFunction == null) {
+                    continue;
+                }
 
-        for (Triple triple : criteriaTriples) {
-            String key = triple.first;
-            String value = triple.third;
-            BiFunction<String, String, Criteria> biFunction = OPERATOR_MAP.get(triple.second);
-            if (biFunction == null) {
-                continue;
+                Criteria criteria = biFunction.apply(key, value);
+                query.addCriteria(criteria);
             }
-
-            criteria.andOperator(biFunction.apply(key, value));
         }
-        query.addCriteria(criteria);
 
-        if (!isBlank(sortBy) && !isBlank(sortDirection)) {
-            Sort sort = Sort.by(
-                    new Sort.Order(Sort.Direction.valueOf(sortDirection), sortBy)
+        Sort sort = null;
+        if (isNotBlank(sortBy) && isNotBlank(sortDirection)) {
+            sort = Sort.by(
+                    new Sort.Order(getDirection(sortDirection), sortBy)
             );
             query.collation(COLLATION);
-            Pageable pageable = PageRequest.of(page, limit, sort);
-            query.with(pageable);
         }
+        Pageable pageable = sort == null ? PageRequest.of(page, limit) : PageRequest.of(page, limit, sort);
+        query.with(pageable);
 
         return query;
+    }
+
+    private static Sort.Direction getDirection(String sortDirection) {
+        try {
+            return Sort.Direction.valueOf(sortDirection);
+        } catch (IllegalArgumentException e) {
+            throw new FilterException(String.format("Invalid sort direction: %s", sortDirection));
+        }
     }
 
     // lhs_1<op_1>rhs_1;lhs_2<op_2>rhs_2....
@@ -100,8 +105,8 @@ public class FilterQueryParser {
         return filterCriteriaTriples;
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+    private boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     // lhs<op>rhs -> [lhs, op, rhs]

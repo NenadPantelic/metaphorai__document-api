@@ -10,18 +10,19 @@ import java.util.stream.Collectors;
 @Component
 public class DocumentMapper {
 
-    private static final String OBJECT_ID_KEY = "_id";
-    private static final String NAME_KEY = "name";
-    private static final String TEXT_KEY = "text";
-    private static final String STATUS_KEY = "status";
-    private static final String PATH_KEY = "path";
-    private static final String TYPE_KEY = "type";
-    private static final String ORIGIN_KEY = "origin";
+    static final String OBJECT_ID_KEY = "_id";
+    static final String NAME_KEY = "name";
+    static final String TEXT_KEY = "text";
+    static final String STATUS_KEY = "status";
+    static final String PATH_KEY = "path";
+    static final String TYPE_KEY = "type";
+    static final String ORIGIN_KEY = "origin";
+    static final String METAPHORS_KEY = "metaphors";
 
-    private static final String OFFSET = "offset";
-    private static final String PHRASE = "phrase";
-    private static final String TYPE = "type";
-    private static final String EXPLANATION = "explanation";
+    static final String OFFSET_KEY = "offset";
+    static final String PHRASE_KEY = "phrase";
+    static final String METAPHOR_TYPE_KEY = "type";
+    static final String EXPLANATION_KEY = "explanation";
 
 
     // todo: add safe guards against missing/faulty fields
@@ -30,7 +31,7 @@ public class DocumentMapper {
             return null;
         }
 
-        List<org.bson.Document> metaphors = (List<org.bson.Document>) document.get("metaphors");
+        List<org.bson.Document> metaphors = (List<org.bson.Document>) document.get(METAPHORS_KEY);
         return Document.builder()
                 .id(document.get(OBJECT_ID_KEY).toString())
                 .status(DocumentStatus.valueOf(document.getString(STATUS_KEY)))
@@ -74,12 +75,16 @@ public class DocumentMapper {
     }
 
     private Metaphor metaphorDocumentToMetaphor(org.bson.Document document) {
-        String phrase = document.getString(PHRASE);
+        if (document == null) {
+            return null;
+        }
+
+        String phrase = document.getString(PHRASE_KEY);
         return Metaphor.builder()
-                .offset(document.getInteger(OFFSET))
-                .explanation(document.getString(EXPLANATION))
+                .offset(document.getInteger(OFFSET_KEY))
+                .explanation(document.getString(EXPLANATION_KEY))
                 .phrase(phrase)
-                .type(MetaphorType.valueOf(document.getString(TYPE)))
+                .type(MetaphorType.valueOf(document.getString(METAPHOR_TYPE_KEY)))
                 .length(phrase.length())
                 .build();
     }

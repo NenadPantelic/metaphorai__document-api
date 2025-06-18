@@ -7,6 +7,6 @@ import lombok.Builder;
 public record DocumentFilterRequest(@NotBlank String filter,
                                     String sortBy,
                                     String sortOrder,
-                                    int page,
-                                    int limit) {
+                                    Integer page,
+                                    Integer limit) {
 }
