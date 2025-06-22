@@ -1,6 +1,7 @@
 package ai.metaphor.document_api.mapper;
 
 import ai.metaphor.document_api.dto.response.*;
+import ai.metaphor.document_api.exception.MappingResultException;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -25,7 +26,19 @@ public class DocumentMapper {
     static final String EXPLANATION_KEY = "explanation";
 
 
-    // todo: add safe guards against missing/faulty fields
+    public DocumentItem bsonDocumentToDocumentItem(org.bson.Document document) {
+        if (document == null) {
+            return null;
+        }
+
+        return DocumentItem.builder()
+                .id(document.get(OBJECT_ID_KEY).toString())
+                .status(mapStringToEnum(document.getString(STATUS_KEY), DocumentStatus.class))
+                .name(document.getString(NAME_KEY))
+                .origin(document.getString(ORIGIN_KEY))
+                .build();
+    }
+
     public Document bsonDocumentToDocument(org.bson.Document document) {
         if (document == null) {
             return null;
@@ -34,26 +47,13 @@ public class DocumentMapper {
         List<org.bson.Document> metaphors = (List<org.bson.Document>) document.get(METAPHORS_KEY);
         return Document.builder()
                 .id(document.get(OBJECT_ID_KEY).toString())
-                .status(DocumentStatus.valueOf(document.getString(STATUS_KEY)))
+                .status(mapStringToEnum(document.getString(STATUS_KEY), DocumentStatus.class))
                 .text(document.getString(TEXT_KEY))
                 .name(document.getString(NAME_KEY))
                 .path(document.getString(PATH_KEY))
                 .type(document.getString(TYPE_KEY))
                 .origin(document.getString(ORIGIN_KEY))
                 .metaphors(metaphorDocumentsToMetaphors(metaphors))
-                .build();
-    }
-
-    public DocumentItem bsonDocumentToDocumentItem(org.bson.Document document) {
-        if (document == null) {
-            return null;
-        }
-
-        return DocumentItem.builder()
-                .id(document.get(OBJECT_ID_KEY).toString())
-                .status(DocumentStatus.valueOf(document.getString(STATUS_KEY)))
-                .name(document.getString(NAME_KEY))
-                .origin(document.getString(ORIGIN_KEY))
                 .build();
     }
 
@@ -68,6 +68,10 @@ public class DocumentMapper {
     }
 
     private List<Metaphor> metaphorDocumentsToMetaphors(List<org.bson.Document> metaphors) {
+        if (metaphors == null) {
+            return List.of();
+        }
+
         return metaphors.stream()
                 .map(this::metaphorDocumentToMetaphor)
                 .sorted(Comparator.comparingInt(Metaphor::offset))
@@ -84,8 +88,16 @@ public class DocumentMapper {
                 .offset(document.getInteger(OFFSET_KEY))
                 .explanation(document.getString(EXPLANATION_KEY))
                 .phrase(phrase)
-                .type(MetaphorType.valueOf(document.getString(METAPHOR_TYPE_KEY)))
+                .type(mapStringToEnum(document.getString(METAPHOR_TYPE_KEY), MetaphorType.class))
                 .length(phrase.length())
                 .build();
+    }
+
+    public <E extends Enum<E>> E mapStringToEnum(String value, Class<E> eClass) {
+        try {
+            return Enum.valueOf(eClass, value);
+        } catch (IllegalArgumentException e) {
+            throw new MappingResultException(String.format("Unable to map %s to %s", value, eClass.getSimpleName()));
+        }
     }
 }

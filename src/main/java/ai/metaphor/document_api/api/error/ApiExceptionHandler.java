@@ -18,6 +18,12 @@ public class ApiExceptionHandler {
         return new ApiError(exception.getMessage(), HttpStatus.BAD_REQUEST.value());
     }
 
+    @ExceptionHandler(FilerException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // data not stored properly
+    public ApiError handleResultMappingException(FilerException exception) {
+        return new ApiError(exception.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiError handleException(RuntimeException exception) {
